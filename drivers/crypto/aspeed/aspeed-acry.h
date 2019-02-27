@@ -148,7 +148,7 @@ struct aspeed_acry_alg {
 static inline void
 aspeed_acry_write(struct aspeed_acry_dev *crypto, u32 val, u32 reg)
 {
-	printk("write : val: %x , reg : %x \n", val, reg);
+	// printk("write : val: %x , reg : %x \n", val, reg);
 	writel(val, crypto->regs + reg);
 }
 

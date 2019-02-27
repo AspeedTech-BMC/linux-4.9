@@ -17,7 +17,7 @@
 
 #include "aspeed-acry.h"
 
-#define ASPEED_RSA_DEBUG
+// #define ASPEED_RSA_DEBUG
 
 #ifdef ASPEED_RSA_DEBUG
 // #define RSA_DBG(fmt, args...) printk(KERN_DEBUG "%s() " fmt, __FUNCTION__, ## args)
@@ -95,7 +95,7 @@ int aspeed_acry_rsa_sg_copy_to_buffer(u8 *buf, struct scatterlist *src, size_t n
 		buf[data_byte_mapping[i]] =  dram_buffer[j];
 		i++;
 	}
-	printk("src:\n");
+	// printk("src:\n");
 	print_dram(dram_buffer, nbytes);
 	print_sram(buf, nbytes, 2);
 
@@ -122,8 +122,8 @@ int aspeed_acry_rsa_ctx_copy(void *buf, const void *xbuf, size_t nbytes, int mod
 	nbits = nbytes * 8;
 	if (nbytes > 0)
 		nbits -= count_leading_zeros(src[0]) - (BITS_PER_LONG - 8);
-	printk("nbytes: %d\n", nbytes);
-	printk("nbits: %d\n", nbits);
+	// printk("nbytes: %d\n", nbytes);
+	// printk("nbits: %d\n", nbits);
 	print_dram(src, nbytes);
 	// i = length - 1;
 	// for (j = 0; j < length; j++, i--)
@@ -149,7 +149,7 @@ int aspeed_acry_rsa_ctx_copy(void *buf, const void *xbuf, size_t nbytes, int mod
 				// printk("map :%x ", mod_dw_mapping[j - 1]);
 				break;
 			}
-			printk("a :%x \n", a);
+			// printk("a :%x \n", a);
 		}
 	}
 	print_sram(buf, nbytes, mode);
@@ -207,7 +207,7 @@ static int aspeed_acry_rsa_transfer(struct aspeed_acry_dev *acry_dev)
 		scatterwalk_map_and_copy(dram_buffer, out_sg, 0, result_nbytes, 1);// TODO check sram DW write
 		req->dst_len = result_nbytes;
 	} else {
-		printk("RSA engine error!\n")
+		printk("RSA engine error!\n");
 	}
 	aspeed_acry_write(acry_dev, ACRY_CMD_DMA_SRAM_AHB_ENGINE, ASPEED_ACRY_DMA_CMD);
 	return aspeed_acry_rsa_complete(acry_dev, 0);
@@ -318,10 +318,10 @@ static int aspeed_acry_rsa_setkey(struct crypto_akcipher *tfm, const void *key,
 		ret = rsa_parse_pub_key(&raw_key, key, keylen);
 	if (ret)
 		return ret;
-	printk("raw_key.n_sz %d, raw_key.e_sz %d, raw_key.d_sz %d, raw_key.p_sz %d, raw_key.q_sz %d, raw_key.dp_sz %d, raw_key.dq_sz %d, raw_key.qinv_sz %d\n",
-	       raw_key.n_sz, raw_key.e_sz, raw_key.d_sz,
-	       raw_key.p_sz, raw_key.q_sz, raw_key.dp_sz,
-	       raw_key.dq_sz, raw_key.qinv_sz);
+	// printk("raw_key.n_sz %d, raw_key.e_sz %d, raw_key.d_sz %d, raw_key.p_sz %d, raw_key.q_sz %d, raw_key.dp_sz %d, raw_key.dq_sz %d, raw_key.qinv_sz %d\n",
+	//        raw_key.n_sz, raw_key.e_sz, raw_key.d_sz,
+	//        raw_key.p_sz, raw_key.q_sz, raw_key.dp_sz,
+	//        raw_key.dq_sz, raw_key.qinv_sz);
 	if (raw_key.n_sz > 513)
 		return -EINVAL;
 

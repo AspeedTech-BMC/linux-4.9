@@ -107,16 +107,16 @@ static void aspeed_acry_sram_mapping(void)
 		j++;
 		j = j % 4 ? j : j + 8;
 	}
-	printk("aspeed_acry_sram_mapping\n");
-	printk("exp_dw_mapping\n");
-	for (i = 0; i < ASPEED_ACRY_RSA_MAX_LEN / BYTES_PER_DWORD; i++) {
-		if (i % 0x10 == 0)
-			printk(KERN_CONT "%05x: ", i);
-		printk(KERN_CONT "%02x ", exp_dw_mapping[i]);
-		if ((i - 0xf) % 0x10 == 0)
-			printk(KERN_CONT "\n");
-	}
-	printk(KERN_CONT "\n");
+	// printk("aspeed_acry_sram_mapping\n");
+	// printk("exp_dw_mapping\n");
+	// for (i = 0; i < ASPEED_ACRY_RSA_MAX_LEN / BYTES_PER_DWORD; i++) {
+	// 	if (i % 0x10 == 0)
+	// 		printk(KERN_CONT "%05x: ", i);
+	// 	printk(KERN_CONT "%02x ", exp_dw_mapping[i]);
+	// 	if ((i - 0xf) % 0x10 == 0)
+	// 		printk(KERN_CONT "\n");
+	// }
+	// printk(KERN_CONT "\n");
 }
 
 static void aspeed_acry_done_task(unsigned long data)
