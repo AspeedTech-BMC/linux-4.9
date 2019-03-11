@@ -1,9 +1,10 @@
-obj-$(CONFIG_CRYPTO_DEV_ASPEED) += aspeed_crypto.o aspeed_g6_crypto.o
-aspeed_crypto-objs := aspeed-hace.o \
+obj-$(CONFIG_CRYPTO_DEV_ASPEED) += aspeed_hace.o
+obj-$(CONFIG_CRYPTO_ACRY_ASPEED) += aspeed_acry.o
+aspeed_hace-objs := aspeed-hace-main.o \
 		      aspeed-hace-crypto.o \
 		      aspeed-hace-hash.o \
 		      aspeed-hace-rsa.o
 
-aspeed_g6_crypto-objs := aspeed-acry.o \
+aspeed_acry-objs := aspeed-acry-main.o \
 		         aspeed-acry-rsa.o
 
