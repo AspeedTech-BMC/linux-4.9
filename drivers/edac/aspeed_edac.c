@@ -206,11 +206,12 @@ static int config_irq(void *ctx, struct platform_device *pdev)
 
 	/* register interrupt handler */
 	irq = platform_get_irq(pdev, 0);
-	dev_dbg(&pdev->dev, "got irq %d\n", irq);
-	if (!irq)
+	if (irq < 0) {
+		dev_err(&pdev->dev, "no irq specified\n");
 		return -ENODEV;
+	}
 
-	rc = devm_request_irq(&pdev->dev, irq, mcr_isr, IRQF_TRIGGER_HIGH,
+	rc = devm_request_irq(&pdev->dev, irq, mcr_isr, 0,
 			      DRV_NAME, ctx);
 	if (rc) {
 		dev_err(&pdev->dev, "unable to request irq %d\n", irq);
@@ -307,6 +308,7 @@ static int aspeed_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "ECC mode is not configured in u-boot\n");
 		return -EPERM;
 	}
+	printk("aspeed_probe 2\n");
 
 	edac_op_state = EDAC_OPSTATE_INT;
 
