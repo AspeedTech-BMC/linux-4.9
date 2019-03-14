@@ -463,7 +463,7 @@ config EDAC_XGENE
 	  APM X-Gene family of SOCs.
 
 config EDAC_ASPEED
-	tristate "Aspeed AST 2500 SoC"
+	tristate "Aspeed AST BMC SoC"
 	depends on (MACH_ASPEED_G5 || MACH_ASPEED_G6)
 	help
 	  Support for error detection and correction on the Aspeed AST 2500 SoC.

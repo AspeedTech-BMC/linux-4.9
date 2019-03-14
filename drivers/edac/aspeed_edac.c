@@ -61,6 +61,69 @@ static int regmap_reg_read(void *context, unsigned int reg, unsigned int *val)
 	return 0;
 }
 
+static const u32 ast2400_dram_table[] = {
+	0x04000000,	//64MB
+	0x08000000,	//128MB
+	0x10000000, //256MB
+	0x20000000,	//512MB
+};
+
+static const u32 ast2500_dram_table[] = {
+	0x08000000,	//128MB
+	0x10000000,	//256MB
+	0x20000000,	//512MB
+	0x40000000,	//1024MB
+};
+
+static const u32 ast2600_dram_table[] = {
+	0x10000000,	//256MB
+	0x20000000,	//512MB
+	0x40000000,	//1024MB
+	0x80000000,	//2048MB
+};
+
+static ssize_t aspeed_ddr_size_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	u32 reg04;
+	u32 size;
+
+	regmap_read(aspeed_regmap, ASPEED_MCR_CONF, &reg04);
+
+#if defined(CONFIG_MACH_ASPEED_G6)
+	size = ast2600_dram_table[reg04 & 0x3];
+#elif defined(CONFIG_MACH_ASPEED_G5)
+	size = ast2500_dram_table[reg04 & 0x3];
+#else
+	size = ast2400_dram_table[reg04 & 0x3];
+#endif
+	return sprintf(buf, "08%x \n", size);
+
+}
+
+static ssize_t aspeed_ddr_type_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	u32 reg04;
+
+	regmap_read(aspeed_regmap, ASPEED_MCR_CONF, &reg04);
+
+	return sprintf(buf, "%s\n", reg04 & ASPEED_MCR_CONF_DRAM_TYPE ? "DDR4":"DDR3");
+}
+
+DEVICE_ATTR(ddr_size, S_IRUGO,
+	    aspeed_ddr_size_show, NULL);
+DEVICE_ATTR(ddr_type, S_IRUGO,
+	    aspeed_ddr_type_show, NULL);
+
+static struct attribute *aspeed_ddr_dev_attrs[] = {
+	&dev_attr_ddr_size.attr,
+	&dev_attr_ddr_type.attr,
+	NULL
+};
+
+ATTRIBUTE_GROUPS(aspeed_ddr_dev);
+
 static bool regmap_is_volatile(struct device *dev, unsigned int reg)
 {
 	switch (reg) {
@@ -238,7 +301,11 @@ static int init_csrows(struct mem_ctl_info *mci)
 	int rc;
 
 	/* retrieve info about physical memory from device tree */
-	np = of_find_node_by_path("/memory");
+#ifdef CONFIG_MACH_ASPEED_G4
+	np = of_find_node_by_path("/memory@40000000");
+#else
+	np = of_find_node_by_path("/memory@80000000");
+#endif
 	if (!np) {
 		dev_err(mci->pdev, "dt: missing /memory node\n");
 		return -ENODEV;
@@ -254,6 +321,9 @@ static int init_csrows(struct mem_ctl_info *mci)
 	};
 
 	dev_dbg(mci->pdev, "dt: /memory node resources: first page r.start=0x%x, resource_size=0x%x, PAGE_SHIFT macro=0x%x\n",
+		r.start, resource_size(&r), PAGE_SHIFT);
+
+	printk("dt: /memory node resources: first page r.start=0x%x, resource_size=0x%x, PAGE_SHIFT macro=0x%x\n",
 		r.start, resource_size(&r), PAGE_SHIFT);
 
 	csrow->first_page = r.start >> PAGE_SHIFT;
@@ -348,7 +418,13 @@ static int aspeed_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to register with EDAC core\n");
 		goto probe_exit02;
 	}
-
+#if 0
+	rc = edac_mc_add_mc_with_groups(mci, aspeed_ddr_dev_groups);
+	 if (rc) {
+			 edac_dbg(3, "failed edac_mc_add_mc()\n");
+			 goto probe_exit02;
+	 }
+#endif
 	/* register interrupt handler and enable interrupts */
 	rc = config_irq(mci, pdev);
 	if (rc) {
