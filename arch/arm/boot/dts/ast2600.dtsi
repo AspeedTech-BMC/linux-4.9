@@ -87,6 +87,14 @@
 		};
 	};
 
+	clocks {
+		pwm_tacho_fixed_clk: fixedclk {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <40500000>;
+		};
+	};
+
 	ahb {
 		compatible = "simple-bus";
 		#address-cells = <1>;
@@ -107,6 +115,12 @@
 					<0x40466000 0x2000>;
 		};
 
+	        edac: sdram@1e6e0000 {
+        	        compatible = "aspeed,ast2600-sdram-edac";
+                	reg = <0x1e6e0000 0x174>;
+	                interrupts = <GIC_SPI 0 IRQ_TYPE_LEVEL_HIGH>;
+        	};
+
 		mac0: ftgmac@1e660000 {
 			compatible = "aspeed,ast2600-mac", "faraday,ftgmac100";
 			reg = <0x1e660000 0x180>, <0x1e650000 0x4>;
@@ -117,11 +131,106 @@
 			phy-handle = <&phy0>;
 #endif
 		};
+		
+		ehci0: usb@1e6a1000 {
+			compatible = "aspeed,ast2500-ehci", "generic-ehci";
+			reg = <0x1e6a1000 0x100>;
+			interrupts = <GIC_SPI 5 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&syscon ASPEED_CLK_GATE_USBPORT1CLK>;
+		};
+
+                ehci1: usb@1e6a3000 {
+                        compatible = "aspeed,ast2500-ehci", "generic-ehci";
+                        reg = <0x1e6a3000 0x100>;
+                        interrupts = <GIC_SPI 9 IRQ_TYPE_LEVEL_HIGH>;
+                        clocks = <&syscon ASPEED_CLK_GATE_USBPORT2CLK>;
+                };
+
+		uhci: usb@1e6b0000 {
+			compatible = "aspeed,ast2500-uhci", "generic-uhci";
+			reg = <0x1e6b0000 0x100>;
+			interrupts = <GIC_SPI 10 IRQ_TYPE_LEVEL_HIGH>;
+			#ports = <2>;
+			clocks = <&syscon ASPEED_CLK_GATE_USBUHCICLK>;
+		};
+
+		vhub: usb-vhub@1e6a0000 {
+			compatible = "aspeed,ast2500-usb-vhub";
+			reg = <0x1e6a0000 0x300>;
+			interrupts = <GIC_SPI 5 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&syscon ASPEED_CLK_GATE_USBPORT1CLK>;
+			list_mode = <0>;
+		};
+
 		apb {
 			compatible = "simple-bus";
 			#address-cells = <1>;
 			#size-cells = <1>;
 			ranges;
+
+			pwm_tacho: pwm-tacho-controller@1e610000 {
+				compatible = "aspeed,ast2600-pwm-tachometer";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0x1e610000 0x100>;
+				clocks = <&pwm_tacho_fixed_clk>;
+				resets = <&syscon ASPEED_RESET_PWM>;
+#if 0
+				fan@0 {
+					reg = <0x00>;
+					period = /bits/ 8 <>;
+					cooling-levels = /bits/ 8 <125 151 177 203 229 255>;
+					aspeed,fan-tach-ch = /bits/ 8 <0x00>;
+                		};
+				fan@1 {
+					reg = <0x01>;
+					cooling-levels = /bits/ 8 <125 151 177 203 229 255>;
+					aspeed,fan-tach-ch = /bits/ 8 <0x01>;
+				};
+	                	fan@2 {
+        	                	reg = <0x02>;
+					cooling-levels = /bits/ 8 <125 151 177 203 229 255>;
+        	                	aspeed,fan-tach-ch = /bits/ 8 <0x02>;
+		                };
+
+        		        fan@3 {
+                		        reg = <0x03>;
+					cooling-levels = /bits/ 8 <125 151 177 203 229 255>;
+					aspeed,fan-tach-ch = /bits/ 8 <0x03>;
+				};
+
+				fan@4 {
+					reg = <0x04>;
+					cooling-levels = /bits/ 8 <125 151 177 203 229 255>;
+					aspeed,fan-tach-ch = /bits/ 8 <0x04>;
+				};
+
+				fan@5 {
+					reg = <0x05>;
+					cooling-levels = /bits/ 8 <125 151 177 203 229 255>;
+					aspeed,fan-tach-ch = /bits/ 8 <0x05>;
+				};
+
+				fan@6 {
+					reg = <0x06>;
+					cooling-levels = /bits/ 8 <125 151 177 203 229 255>;
+					aspeed,fan-tach-ch = /bits/ 8 <0x06>;
+				};
+
+				fan@7 {
+					reg = <0x07>;
+					cooling-levels = /bits/ 8 <125 151 177 203 229 255>;
+					aspeed,fan-tach-ch = /bits/ 8 <0x07>;
+				};
+#else
+				fan@15 {
+					reg = <0x0f>;
+					period = /bits/ 8 <0xf0>;
+					cooling-levels = /bits/ 8 <125 151 177 203 229 255>;
+					aspeed,fan-tach-ch = /bits/ 8 <0x0f>;
+				};
+#endif
+			};
 
 			syscon: syscon@1e6e2000 {
 				compatible = "aspeed,ast2600-scu", "syscon", "simple-mfd";
@@ -131,6 +240,89 @@
 				#size-cells = <1>;
 				#clock-cells = <1>;
 				#reset-cells = <1>;
+			};
+
+			jtag: jtag@1e6e4000 {
+				compatible = "aspeed,ast2600-jtag";
+				reg= <0x1e6e4000 0x20>;
+				interrupts = <GIC_SPI 27 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&syscon ASPEED_CLK_HPLL>;
+				resets = <&syscon ASPEED_RESET_JTAG_MASTER>;
+				reset-names = "jtag";
+			};
+
+			gfx: display@1e6e6000 {
+				compatible = "aspeed,ast-g6-gfx", "syscon";
+				reg = <0x1e6e6000 0x1000>;
+				interrupts = <GIC_SPI 14 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&syscon ASPEED_CLK_GATE_D1CLK>;
+				resets = <&syscon ASPEED_RESET_CRT>, <&syscon ASPEED_RESET_CRT1>;
+				reset-names = "crt", "crt1";
+			};
+
+			xdma: xdma@1e6e7000 {
+				compatible = "aspeed,ast2600-xdma";
+				reg = <0x1e6e7000 0x80>;
+				interrupts = <GIC_SPI 6 IRQ_TYPE_LEVEL_HIGH>;
+				interrupts-extended = <&gic 6>, <&scu_ic ASPEED_SCU_PCIE_REST_LOW_TO_HIGH>;
+				resets = <&syscon ASPEED_RESET_XDMA>;
+			};
+
+			mctp: mctp@1e6e8000 {
+				compatible = "aspeed,ast2600-mctp";
+				reg = <0x1e6e8000 0x30 0x1e6ed0c4 0x04>;
+				interrupts = <GIC_SPI 26 IRQ_TYPE_LEVEL_HIGH>;
+	 			interrupts-extended = <&gic 26>, <&scu_ic ASPEED_SCU_PCIE_REST_LOW_TO_HIGH>;
+				resets = <&syscon ASPEED_RESET_MCTP>;
+			};
+
+			espi: espi@1e6ee000 {
+				compatible = "aspeed,ast2600-espi";
+				reg = <0x1e6ee000 0x200>;
+				interrupts = <GIC_SPI 23 IRQ_TYPE_LEVEL_HIGH>;
+				resets = <&syscon ASPEED_RESET_ESPI>;
+			};
+
+			video: video@1e700000 {
+				compatible = "aspeed,ast2600-video";
+				/* 184MB : 40MB*/
+				reg = <0x1e700000 0x300>;
+				interrupts = <GIC_SPI 7 IRQ_TYPE_LEVEL_HIGH>;
+				memory-region = <&video_memory>;
+				clocks = <&syscon ASPEED_CLK_GATE_ECLK>, <&syscon ASPEED_CLK_GATE_VCLK>;
+				clock-names = "eclk", "vclk";
+				resets = <&syscon ASPEED_RESET_VIDEO>;
+			};
+
+                        sdhci: sdhci@1e740000 {
+                                compatible = "simple-bus";
+                                #address-cells = <1>;
+                                #size-cells = <1>;
+                                ranges = <0 0x1e740000 0x1000>;
+                        };
+
+			emmc: emmc@1e750000 {
+                                compatible = "simple-bus";
+                                #address-cells = <1>;
+                                #size-cells = <1>;
+                                ranges = <0 0x1e750000 0x1000>;
+			};
+
+			gpio: gpio@1e780000 {
+				#gpio-cells = <2>;
+				gpio-controller;
+#if 1
+				compatible = "aspeed,ast-g5-gpio";
+#else
+				compatible = "aspeed,ast2600-gpio";
+#endif
+				reg = <0x1e780000 0x1000>;
+				interrupts = <GIC_SPI 40 IRQ_TYPE_LEVEL_HIGH>;
+#if 0
+				gpio-ranges = <&pinctrl 0 0 220>;
+#endif
+				clocks = <&syscon ASPEED_CLK_APB>;
+				interrupt-controller;
 			};
 
 			uart1: serial@1e783000 {
@@ -352,7 +544,77 @@
 			};
 
 		};
+
+		hace: hace@1e6d0000 {
+			compatible = "aspeed,ast2600-hace";
+			reg = <0x1e6d0000 0x200>;
+			interrupts = <4>;
+			clocks = <&syscon ASPEED_CLK_GATE_YCLK>;
+			clock-names = "yclk";
+		};
+
+		acry: acry@1e6fa000 {
+			compatible = "aspeed,ast2600-acry";
+			reg = <0x1e6fa000 0x400 0x1e710000 0x1800>;
+			// interrupts = <160>;
+			clocks = <&syscon ASPEED_CLK_GATE_RSACLK>;
+			clock-names = "rsaclk";
+		};
 	};
+
+};
+
+&emmc {
+        emmc_ic: interrupt-controller@0 {
+                #interrupt-cells = <1>;
+                compatible = "aspeed,aspeed-emmc-irq";
+                reg = <0x0 0x100>;
+                interrupts = <GIC_SPI 15 IRQ_TYPE_LEVEL_HIGH>;
+                interrupt-controller;
+                clocks = <&syscon ASPEED_CLK_GATE_EMMCCLK>, <&syscon ASPEED_CLK_GATE_EMMCEXTCLK>;
+                clock-names = "ctrlclk", "extclk";
+        };
+
+        emmc_slot0: emmc_slot0@100 {
+                compatible = "aspeed,emmc-ast2600";
+                reg = <0x100 0x100>;
+                interrupts = <0>;
+                interrupt-parent = <&emmc_ic>;
+                clocks = <&syscon ASPEED_CLK_EMMC>;
+        };
+};
+
+&sdhci {
+
+        sdhci_ic: interrupt-controller@0 {
+                #interrupt-cells = <1>;
+                compatible = "aspeed,aspeed-sdhci-irq";
+                reg = <0x0 0x100>;
+		interrupts = <GIC_SPI 43 IRQ_TYPE_LEVEL_HIGH>;
+                interrupt-controller;
+                clocks = <&syscon ASPEED_CLK_GATE_SDCLK>, <&syscon ASPEED_CLK_GATE_SDEXTCLK>;
+                clock-names = "ctrlclk", "extclk";
+        };
+
+        sdhci_slot0: sdhci_slot0@100 {
+                compatible = "aspeed,sdhci-ast2500";
+                reg = <0x100 0x100>;
+                interrupts = <0>;
+                interrupt-parent = <&sdhci_ic>;
+                sdhci,auto-cmd12;
+                clocks = <&syscon ASPEED_CLK_SDIO>;
+		pwr_ctrl_gpio = <0>;
+        };
+
+        sdhci_slot1: sdhci_slot1@200 {
+                compatible = "aspeed,sdhci-ast2500";
+                reg = <0x200 0x100>;
+                interrupts = <1>;
+                interrupt-parent = <&sdhci_ic>;
+                sdhci,auto-cmd12;
+                clocks = <&syscon ASPEED_CLK_SDIO>;
+		pwr_ctrl_gpio = <1>;
+        };
 
 };
 

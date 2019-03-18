@@ -22,6 +22,9 @@
 #include <linux/reset.h>
 #include "sdhci-pltfm.h"
 
+#include <linux/gpio.h>
+#include <dt-bindings/gpio/aspeed-gpio.h>
+
 static void sdhci_aspeed_set_clock(struct sdhci_host *host, unsigned int clock)
 {
 	int div;
@@ -91,12 +94,114 @@ static void sdhci_aspeed_set_bus_width(struct sdhci_host *host, int width)
 
 }
 
+void sdhci_aspeed_reset(struct sdhci_host *host, u8 mask)
+{
+	struct sdhci_pltfm_host *pltfm_priv = sdhci_priv(host);
+	struct aspeed_sdhci_irq *sdhci_irq = sdhci_pltfm_priv(pltfm_priv);
+	unsigned long timeout;
+
+	printk("sdhci_aspeed_reset \n");
+	sdhci_writeb(host, mask, SDHCI_SOFTWARE_RESET);
+
+	if (mask & SDHCI_RESET_ALL) {
+		//steven:turn off bus power here
+		if (sdhci_irq->pwr_ctrl_gpio >= 0)
+			gpio_set_value(sdhci_irq->pwr_ctrl_gpio, 0);
+		host->pwr = 0;
+		host->clock = 0;
+	}
+
+	/* Wait max 100 ms */
+	timeout = 100;
+
+	/* hw clears the bit when it's done */
+	while (sdhci_readb(host, SDHCI_SOFTWARE_RESET) & mask) {
+		if (timeout == 0) {
+			pr_err("%s: Reset 0x%x never completed.\n",
+				mmc_hostname(host->mmc), (int)mask);
+			return;
+		}
+		timeout--;
+		mdelay(1);
+	}
+}
+
+static void sdhci_aspeed_set_power(struct sdhci_host *host, unsigned char mode,
+			   unsigned short vdd)
+{
+	struct sdhci_pltfm_host *pltfm_priv = sdhci_priv(host);
+	struct aspeed_sdhci_irq *sdhci_irq = sdhci_pltfm_priv(pltfm_priv);
+	u8 pwr = 0;
+
+	printk("sdhci_aspeed_set_power \n");
+	if (mode != MMC_POWER_OFF) {
+		switch (1 << vdd) {
+		case MMC_VDD_165_195:
+			pwr = SDHCI_POWER_180;
+			break;
+		case MMC_VDD_29_30:
+		case MMC_VDD_30_31:
+			pwr = SDHCI_POWER_300;
+			break;
+		case MMC_VDD_32_33:
+		case MMC_VDD_33_34:
+			pwr = SDHCI_POWER_330;
+			break;
+		default:
+			WARN(1, "%s: Invalid vdd %#x\n",
+			     mmc_hostname(host->mmc), vdd);
+			break;
+		}
+	}
+
+	if (host->pwr == pwr)
+		return;
+
+	host->pwr = pwr;
+
+	if (pwr == 0) {
+		//steven:turn off bus power here
+		if (sdhci_irq->pwr_ctrl_gpio >= 0)
+			gpio_set_value(sdhci_irq->pwr_ctrl_gpio, 0);
+		sdhci_writeb(host, 0, SDHCI_POWER_CONTROL);
+	} else {
+		/*
+		 * Spec says that we should clear the power reg before setting
+		 * a new value. Some controllers don't seem to like this though.
+		 */
+		if (!(host->quirks & SDHCI_QUIRK_SINGLE_POWER_WRITE))
+			sdhci_writeb(host, 0, SDHCI_POWER_CONTROL);
+
+		/*
+		 * At least the Marvell CaFe chip gets confused if we set the
+		 * voltage and set turn on power at the same time, so set the
+		 * voltage first.
+		 */
+		if (host->quirks & SDHCI_QUIRK_NO_SIMULT_VDD_AND_POWER)
+			sdhci_writeb(host, pwr, SDHCI_POWER_CONTROL);
+
+		pwr |= SDHCI_POWER_ON;
+
+		sdhci_writeb(host, pwr, SDHCI_POWER_CONTROL);
+		//steven:turn on bus power here
+		if (sdhci_irq->pwr_ctrl_gpio >= 0)
+			gpio_set_value(sdhci_irq->pwr_ctrl_gpio, 1);
+
+		/*
+		 * Some controllers need an extra 10ms delay of 10ms before
+		 * they can apply clock after applying power
+		 */
+		if (host->quirks & SDHCI_QUIRK_DELAY_AFTER_POWER)
+			mdelay(10);
+	}
+}
+
 /*
 	AST2300/AST2400 : SDMA/PIO
 	AST2500 : ADMA/SDMA/PIO
 */
 static struct sdhci_ops  sdhci_aspeed_ops= {
-#ifdef CONFIG_CAM
+#ifdef CONFIG_MACH_ASPEED_G6
 	.set_clock = sdhci_set_clock,
 #else
 	.set_clock = sdhci_aspeed_set_clock,
@@ -133,6 +238,18 @@ static int sdhci_aspeed_probe(struct platform_device *pdev)
 
 	sdhci_get_of_property(pdev);
 
+	if (of_property_read_u32(np, "pwr_ctrl_gpio", &sdhci_irq->pwr_ctrl_gpio) < 0) {
+		printk("no pwe ctrl gpio \n");
+	} else {
+		printk("gpio power ctrl gpio %d \n", sdhci_irq->pwr_ctrl_gpio);
+		sdhci_aspeed_ops.set_power = sdhci_aspeed_set_power;
+		sdhci_aspeed_ops.reset = sdhci_aspeed_reset;
+		if (gpio_request(sdhci_irq->pwr_ctrl_gpio, "pwr")) {
+			printk("GPIO request failure: GPIO Pwr\n");
+		}
+//		gpio_direction_output(sdhci_irq->pwr_ctrl_gpio, 1);
+	}
+
 	pltfm_host->clk = devm_clk_get(&pdev->dev, NULL);
 
 	pnode = of_parse_phandle(np, "interrupt-parent", 0);
@@ -167,6 +284,8 @@ static int sdhci_aspeed_remove(struct platform_device *pdev)
 static const struct of_device_id sdhci_aspeed_of_match[] = {
 	{ .compatible = "aspeed,sdhci-ast2400", .data = &sdhci_aspeed_pdata },
 	{ .compatible = "aspeed,sdhci-ast2500", .data = &sdhci_aspeed_pdata },
+	{ .compatible = "aspeed,sdhci-ast2600", .data = &sdhci_aspeed_pdata },	
+	{ .compatible = "aspeed,emmc-ast2600", .data = &sdhci_aspeed_pdata },	
 	{}
 };
 
