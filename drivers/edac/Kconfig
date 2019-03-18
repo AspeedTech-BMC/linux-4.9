@@ -462,4 +462,13 @@ config EDAC_XGENE
 	  Support for error detection and correction on the
 	  APM X-Gene family of SOCs.
 
+config EDAC_ASPEED
+	tristate "Aspeed AST BMC SoC"
+	depends on (MACH_ASPEED_G5 || MACH_ASPEED_G6)
+	help
+	  Support for error detection and correction on the Aspeed AST 2500 SoC.
+
+	  First, ECC must be configured in the bootloader. Then, this driver
+	  will expose error counters via the EDAC kernel framework.
+
 endif # EDAC

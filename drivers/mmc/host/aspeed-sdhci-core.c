@@ -35,6 +35,7 @@ static void aspeed_sdhci_irq_handler(struct irq_desc *desc)
 
 	chained_irq_enter(chip, desc);
 	status = readl(sdhci_irq->regs + ASPEED_SDHCI_ISR);
+	status &= 0x3; 
 	for_each_set_bit(bit, &status, ASPEED_SDHCI_SLOT_NUM) {
 		slot_irq = irq_find_mapping(sdhci_irq->irq_domain, bit);
 //		printk("slot_irq %x \n", slot_irq);
@@ -84,21 +85,23 @@ static int irq_aspeed_sdhci_probe(struct platform_device *pdev)
 	if (IS_ERR(sdhci_irq->regs))
 		return PTR_ERR(sdhci_irq->regs);
 
-	sdclk = devm_clk_get(&pdev->dev, "sdclk");
+	sdclk = devm_clk_get(&pdev->dev, "ctrlclk");
 	if (IS_ERR(sdclk)) {
-		dev_err(&pdev->dev, "no sdclk clock defined\n");
+		dev_err(&pdev->dev, "no ctrlclk clock defined\n");
 		return PTR_ERR(sdclk);
 	}
+	printk("irq_aspeed_sdhci_probe sdclk %d ", clk_get_rate(sdclk));
 
 	clk_prepare_enable(sdclk);
 
-	sdcardclk = devm_clk_get(&pdev->dev, "sdextclk");
+	sdcardclk = devm_clk_get(&pdev->dev, "extclk");
 	if (IS_ERR(sdcardclk)) {
-		dev_err(&pdev->dev, "no sdcardclk clock defined\n");
+		dev_err(&pdev->dev, "no ctrlextclk clock defined\n");
 		return PTR_ERR(sdcardclk);
 	}
 
 	clk_prepare_enable(sdcardclk);
+	printk("irq_aspeed_sdhci_probe sdcard clk %d ", clk_get_rate(sdcardclk));
 
 	sdhci_irq->parent_irq = irq_of_parse_and_map(pdev->dev.of_node, 0);
 	if (sdhci_irq->parent_irq < 0)
@@ -134,6 +137,7 @@ static int irq_aspeed_sdhci_probe(struct platform_device *pdev)
 
 static const struct of_device_id irq_aspeed_sdhci_dt_ids[] = {
 	{ .compatible = "aspeed,aspeed-sdhci-irq", },
+	{ .compatible = "aspeed,aspeed-emmc-irq", },	
 	{},
 };
 MODULE_DEVICE_TABLE(of, irq_aspeed_sdhci_dt_ids);

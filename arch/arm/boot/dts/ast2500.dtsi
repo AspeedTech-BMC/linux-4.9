@@ -198,6 +198,12 @@
 		};
 #endif
 
+		edac: sdram@1e6e0000 {
+			compatible = "aspeed,ast2500-sdram-edac";
+			reg = <0x1e6e0000 0x174>;
+			interrupts = <0>;
+		};
+
 		mmc: mmc@1e6e0000 {
 			compatible = "aspeed,ast2500-sdmc";
 			reg = <0x1e6e0000 0x200>;
@@ -743,7 +749,7 @@
 		interrupts = <26>;
 		interrupt-controller;
 		clocks = <&syscon ASPEED_CLK_GATE_SDCLK>, <&syscon ASPEED_CLK_GATE_SDEXTCLK>;
-		clock-names = "sdclk", "sdextclk";
+		clock-names = "ctrlclk", "extclk";
 	};
 
 	sdhci_slot0: sdhci_slot0@100 {

@@ -15,6 +15,7 @@ struct aspeed_sdhci_irq {
 	void __iomem *regs;
 	int parent_irq;
 	struct irq_domain *irq_domain;
+	int	pwr_ctrl_gpio;
 };
 
 static inline void aspeed_sdhci_set_8bit_mode(struct aspeed_sdhci_irq *sdhci_irq, int mode)
